@@ -11,7 +11,7 @@ function normalize(text: string) {
 function generateReply(message: string) {
   const msg = normalize(message);
 
-  // 🚨 EMERGENCIA DIRECTA
+
   if (
     msg.includes("me están atacando") ||
     msg.includes("me quieren hacer daño") ||
@@ -73,6 +73,26 @@ function generateReply(message: string) {
       "Lo primero es asegurar tu seguridad física. ¿Estás en un lugar seguro?",
       "Podría ayudarte mejor si me cuentas si estás en peligro inmediato.",
       "Si hay riesgo, intenta contactar a alguien cercano o servicios de emergencia.",
+    ]);
+  }
+
+   if (
+    msg.includes("le moleste") ||
+    msg.includes("celoso") ||
+    msg.includes("vestido") ||
+    msg.includes("ropa") ||
+    msg.includes("no quiere que") ||
+    msg.includes("me prohíbe") ||
+    msg.includes("controla")
+  ) {
+    return pick([
+      "Lo que describes puede ser una forma de control o manipulación emocional. En una relación sana, nadie debería decidir lo que puedes usar o cómo vestirte.",
+      
+      "Es importante que sepas que sentirte limitada en tu forma de vestir por tu pareja puede ser una señal de una dinámica poco saludable o controladora.",
+      
+      "Ninguna pareja debería hacerte sentir culpable por tu forma de vestir. Eso puede ser un comportamiento de control emocional, y no es algo que debas normalizar.",
+      
+      "Que a tu pareja le moleste tu forma de vestir no debería convertirse en una regla sobre lo que puedes o no puedes hacer. Tus decisiones personales deben ser respetadas.",
     ]);
   }
 
