@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
+
 import { useRouter } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -11,8 +17,10 @@ interface AlertInfo {
 }
 
 type CalcKey =
-  | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
-  | "." | "+" | "-" | "*" | "/" | "=" | "C" | "±" | "%";
+  | "0" | "1" | "2" | "3" | "4"
+  | "5" | "6" | "7" | "8" | "9"
+  | "." | "+" | "-" | "*" | "/"
+  | "=" | "C" | "±" | "%";
 
 // ─── Demo user info ───────────────────────────────────────────────────────────
 const ALERT_INFO: AlertInfo = {
@@ -22,9 +30,14 @@ const ALERT_INFO: AlertInfo = {
 };
 
 const HOLD_THRESHOLD_MS = 3000;
+const RECORDING_DURATION_MS = 10000;
 
 // ─── Calculator logic ─────────────────────────────────────────────────────────
-function evaluate(a: string, op: string, b: string): string {
+function evaluate(
+  a: string,
+  op: string,
+  b: string
+): string {
   const x = parseFloat(a);
   const y = parseFloat(b);
 
@@ -52,22 +65,134 @@ function evaluate(a: string, op: string, b: string): string {
 export default function Calculator() {
   const router = useRouter();
 
+  // ── Calculator state ──────────────────────────────────────────────────────
   const [display, setDisplay] = useState("0");
-  const [stored, setStored] = useState<string | null>(null);
-  const [operator, setOperator] = useState<string | null>(null);
-  const [waitingForOperand, setWaitingForOperand] = useState(false);
 
-  const [showAlert, setShowAlert] = useState(false);
+  const [stored, setStored] =
+    useState<string | null>(null);
+
+  const [operator, setOperator] =
+    useState<string | null>(null);
+
+  const [waitingForOperand, setWaitingForOperand] =
+    useState(false);
+
+  const [pressedKey, setPressedKey] =
+    useState<string | null>(null);
+
+  // ── Hold state ────────────────────────────────────────────────────────────
   const [holdProgress, setHoldProgress] = useState(0);
 
-  const [pressedKey, setPressedKey] = useState<string | null>(null);
+  // ── Alert/video state ─────────────────────────────────────────────────────
+  const [showAlert, setShowAlert] = useState(false);
 
+  const [isRecording, setIsRecording] = useState(false);
+
+  const [recordingCountdown, setRecordingCountdown] =
+    useState(10);
+
+  const [videoUrl, setVideoUrl] =
+    useState<string | null>(null);
+
+  // ── Refs ──────────────────────────────────────────────────────────────────
   const spaceHoldStart = useRef<number | null>(null);
-  const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const holdTimer =
+    useRef<ReturnType<typeof setInterval> | null>(null);
 
   const alertFiredRef = useRef(false);
 
-  // ── Spacebar hold listeners ────────────────────────────────────────────────
+  const mediaRecorderRef =
+    useRef<MediaRecorder | null>(null);
+
+  const recordedChunksRef = useRef<Blob[]>([]);
+
+  const recordingTimeoutRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const countdownIntervalRef =
+    useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const streamRef =
+    useRef<MediaStream | null>(null);
+
+  // ── Start recording ───────────────────────────────────────────────────────
+  const startRecording = async () => {
+    try {
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+
+      streamRef.current = stream;
+
+      const recorder = new MediaRecorder(stream);
+
+      mediaRecorderRef.current = recorder;
+
+      recordedChunksRef.current = [];
+
+      recorder.ondataavailable = event => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(
+          recordedChunksRef.current,
+          {
+            type: "video/webm",
+          }
+        );
+
+        const url = URL.createObjectURL(blob);
+
+        setVideoUrl(url);
+
+        stream.getTracks().forEach(track =>
+          track.stop()
+        );
+
+        setIsRecording(false);
+      };
+
+      recorder.start();
+
+      setIsRecording(true);
+
+      setRecordingCountdown(10);
+
+      // countdown UI
+      countdownIntervalRef.current = setInterval(() => {
+        setRecordingCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(
+              countdownIntervalRef.current!
+            );
+
+            return 0;
+          }
+
+          return prev - 1;
+        });
+      }, 1000);
+
+      // stop after 10 sec
+      recordingTimeoutRef.current = setTimeout(() => {
+        recorder.stop();
+      }, RECORDING_DURATION_MS);
+    } catch (err) {
+      console.error(err);
+
+      alert(
+        "Camera/microphone access denied."
+      );
+    }
+  };
+
+  // ── Spacebar hold listeners ───────────────────────────────────────────────
   const startHold = useCallback(() => {
     if (spaceHoldStart.current !== null) return;
 
@@ -77,7 +202,8 @@ export default function Calculator() {
 
     holdTimer.current = setInterval(() => {
       const elapsed =
-        Date.now() - (spaceHoldStart.current ?? Date.now());
+        Date.now() -
+        (spaceHoldStart.current ?? Date.now());
 
       const progress = Math.min(
         (elapsed / HOLD_THRESHOLD_MS) * 100,
@@ -93,9 +219,12 @@ export default function Calculator() {
         alertFiredRef.current = true;
 
         setShowAlert(true);
+
         setHoldProgress(100);
 
         clearInterval(holdTimer.current!);
+
+        startRecording();
       }
     }, 30);
   }, []);
@@ -105,16 +234,21 @@ export default function Calculator() {
 
     if (holdTimer.current) {
       clearInterval(holdTimer.current);
+
       holdTimer.current = null;
     }
 
-    if (!alertFiredRef.current) setHoldProgress(0);
+    if (!alertFiredRef.current) {
+      setHoldProgress(0);
+    }
   }, []);
 
+  // ── Keyboard listeners ────────────────────────────────────────────────────
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" && !e.repeat) {
         e.preventDefault();
+
         startHold();
       }
     };
@@ -122,22 +256,48 @@ export default function Calculator() {
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") {
         e.preventDefault();
+
         endHold();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
+
     window.addEventListener("keyup", onKeyUp);
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener(
+        "keydown",
+        onKeyDown
+      );
+
+      window.removeEventListener(
+        "keyup",
+        onKeyUp
+      );
     };
   }, [startHold, endHold]);
 
+  // ── Cleanup ───────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      if (holdTimer.current) clearInterval(holdTimer.current);
+      if (holdTimer.current) {
+        clearInterval(holdTimer.current);
+      }
+
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+      }
+
+      if (countdownIntervalRef.current) {
+        clearInterval(
+          countdownIntervalRef.current
+        );
+      }
+
+      streamRef.current
+        ?.getTracks()
+        .forEach(track => track.stop());
     };
   }, []);
 
@@ -145,6 +305,7 @@ export default function Calculator() {
   const handleDigit = (d: string) => {
     if (waitingForOperand) {
       setDisplay(d);
+
       setWaitingForOperand(false);
     } else {
       setDisplay(prev =>
@@ -160,6 +321,7 @@ export default function Calculator() {
   const handleDecimal = () => {
     if (waitingForOperand) {
       setDisplay("0.");
+
       setWaitingForOperand(false);
 
       return;
@@ -173,27 +335,42 @@ export default function Calculator() {
   const handleOperator = (op: string) => {
     const current = display;
 
-    if (stored !== null && operator && !waitingForOperand) {
-      const result = evaluate(stored, operator, current);
+    if (
+      stored !== null &&
+      operator &&
+      !waitingForOperand
+    ) {
+      const result = evaluate(
+        stored,
+        operator,
+        current
+      );
 
       setDisplay(result);
+
       setStored(result);
     } else {
       setStored(current);
     }
 
     setOperator(op);
+
     setWaitingForOperand(true);
   };
 
   const handleEquals = () => {
     if (!operator || stored === null) return;
 
-    const result = evaluate(stored, operator, display);
+    const result = evaluate(
+      stored,
+      operator,
+      display
+    );
 
     setDisplay(result);
 
     setStored(null);
+
     setOperator(null);
 
     setWaitingForOperand(true);
@@ -203,6 +380,7 @@ export default function Calculator() {
     setDisplay("0");
 
     setStored(null);
+
     setOperator(null);
 
     setWaitingForOperand(false);
@@ -219,7 +397,9 @@ export default function Calculator() {
   };
 
   const handlePercent = () => {
-    setDisplay(prev => String(parseFloat(prev) / 100));
+    setDisplay(prev =>
+      String(parseFloat(prev) / 100)
+    );
   };
 
   const handleKey = (key: CalcKey) => {
@@ -251,105 +431,100 @@ export default function Calculator() {
   };
 
   // ── Layout ────────────────────────────────────────────────────────────────
-  const keys: {
-    label: string;
-    key: CalcKey;
-    span?: boolean;
-    type: "fn" | "op" | "num";
-  }[] = [
-    { label: "C", key: "C", type: "fn" },
-    { label: "±", key: "±", type: "fn" },
-    { label: "%", key: "%", type: "fn" },
-    { label: "÷", key: "/", type: "op" },
+const keys: {
+  label: string;
+  key: CalcKey;
+  type: "fn" | "op" | "num";
+  span?: boolean;
+}[] = [
+  { label: "C", key: "C", type: "fn" },
+  { label: "±", key: "±", type: "fn" },
+  { label: "%", key: "%", type: "fn" },
+  { label: "÷", key: "/", type: "op" },
 
-    { label: "7", key: "7", type: "num" },
-    { label: "8", key: "8", type: "num" },
-    { label: "9", key: "9", type: "num" },
-    { label: "×", key: "*", type: "op" },
+  { label: "7", key: "7", type: "num" },
+  { label: "8", key: "8", type: "num" },
+  { label: "9", key: "9", type: "num" },
+  { label: "×", key: "*", type: "op" },
 
-    { label: "4", key: "4", type: "num" },
-    { label: "5", key: "5", type: "num" },
-    { label: "6", key: "6", type: "num" },
-    { label: "−", key: "-", type: "op" },
+  { label: "4", key: "4", type: "num" },
+  { label: "5", key: "5", type: "num" },
+  { label: "6", key: "6", type: "num" },
+  { label: "−", key: "-", type: "op" },
 
-    { label: "1", key: "1", type: "num" },
-    { label: "2", key: "2", type: "num" },
-    { label: "3", key: "3", type: "num" },
-    { label: "+", key: "+", type: "op" },
+  { label: "1", key: "1", type: "num" },
+  { label: "2", key: "2", type: "num" },
+  { label: "3", key: "3", type: "num" },
+  { label: "+", key: "+", type: "op" },
 
-    { label: "0", key: "0", type: "num", span: true },
-    { label: ".", key: ".", type: "num" },
-    { label: "=", key: "=", type: "op" },
-  ];
+  {
+    label: "0",
+    key: "0",
+    type: "num",
+    span: true,
+  },
+
+  { label: ".", key: ".", type: "num" },
+  { label: "=", key: "=", type: "op" },
+];
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
-
-        *, *::before, *::after {
+        * {
           box-sizing: border-box;
-          margin: 0;
-          padding: 0;
         }
 
         body {
-          font-family: 'DM Sans', sans-serif;
+          margin: 0;
           background: #0a0a0f;
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          font-family: sans-serif;
         }
 
         .bg {
           position: fixed;
           inset: 0;
-          z-index: 0;
 
           background:
             radial-gradient(
               ellipse 60% 50% at 20% 30%,
-              rgba(255,60,80,.12) 0%,
-              transparent 70%
-            ),
-            radial-gradient(
-              ellipse 50% 60% at 80% 70%,
-              rgba(60,80,255,.10) 0%,
+              rgba(255,60,80,.12),
               transparent 70%
             ),
             #0a0a0f;
         }
 
         .wrapper {
-          position: relative;
-          z-index: 1;
+          min-height: 100vh;
 
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 24px;
+          justify-content: center;
+
+          gap: 20px;
+
+          position: relative;
+          z-index: 1;
         }
 
         .hint {
-          font-family: 'DM Mono', monospace;
-          font-size: 11px;
-          letter-spacing: .12em;
-          color: rgba(255,255,255,.25);
-          text-transform: uppercase;
+          color: rgba(255,255,255,.5);
+          font-size: 12px;
 
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 12px;
         }
 
         .hint-bar {
-          width: 80px;
-          height: 3px;
+          width: 90px;
+          height: 4px;
 
           background: rgba(255,255,255,.08);
 
-          border-radius: 2px;
+          border-radius: 999px;
+
           overflow: hidden;
         }
 
@@ -363,12 +538,9 @@ export default function Calculator() {
               #ff8c00
             );
 
-          border-radius: 2px;
-
-          transition: width .06s linear;
+          transition: width .05s linear;
         }
 
-        /* ── Calculator ── */
         .calc {
           position: relative;
 
@@ -376,168 +548,117 @@ export default function Calculator() {
 
           background: rgba(20,20,28,.85);
 
-          backdrop-filter: blur(24px);
-
           border-radius: 28px;
 
-          border: 1px solid rgba(255,255,255,.07);
+          overflow: hidden;
+
+          backdrop-filter: blur(24px);
+
+          border:
+            1px solid rgba(255,255,255,.06);
 
           box-shadow:
-            0 0 0 1px rgba(0,0,0,.5),
-            0 32px 80px rgba(0,0,0,.6),
-            inset 0 1px 0 rgba(255,255,255,.08);
-
-          overflow: hidden;
+            0 30px 80px rgba(0,0,0,.6);
         }
 
-        /* ── Settings button ── */
         .settings-btn {
           position: absolute;
+
           top: 14px;
           left: 14px;
-          z-index: 20;
+
+          z-index: 5;
 
           width: 38px;
           height: 38px;
 
-          border: 1px solid rgba(255,255,255,.08);
+          border: none;
           border-radius: 12px;
 
-          background: rgba(255,255,255,.05);
-          backdrop-filter: blur(12px);
+          background:
+            rgba(255,255,255,.06);
 
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          color: rgba(255,255,255,.85);
-          font-size: 18px;
+          color: white;
 
           cursor: pointer;
-
-          transition:
-            transform .15s ease,
-            background .15s ease,
-            border .15s ease;
         }
 
-        .settings-btn:hover {
-          background: rgba(255,255,255,.1);
-          border: 1px solid rgba(255,255,255,.16);
-        }
-
-        .settings-btn:active {
-          transform: scale(.92);
-        }
-
-        /* ── Display ── */
         .display {
-          padding: 28px 24px 16px;
-          min-height: 110px;
+          min-height: 120px;
+
+          padding:
+            28px 24px 18px;
 
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
           align-items: flex-end;
-
-          gap: 4px;
         }
 
         .display-sub {
-          font-family: 'DM Mono', monospace;
-          font-size: 13px;
-          color: rgba(255,255,255,.3);
+          color:
+            rgba(255,255,255,.35);
 
-          min-height: 18px;
+          margin-bottom: 8px;
         }
 
         .display-main {
-          font-family: 'DM Mono', monospace;
-          font-size: clamp(28px, 8vw, 48px);
-          font-weight: 500;
+          color: white;
 
-          color: #fff;
+          font-size: 48px;
 
-          letter-spacing: -.02em;
-          word-break: break-all;
-          line-height: 1;
+          font-weight: bold;
         }
 
-        /* ── Grid ── */
         .grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+
+          grid-template-columns:
+            repeat(4, 1fr);
 
           gap: 1px;
 
-          background: rgba(255,255,255,.04);
-
-          padding: 1px;
-
-          border-radius: 0 0 28px 28px;
+          background:
+            rgba(255,255,255,.04);
         }
 
-        /* ── Buttons ── */
         .btn {
-          all: unset;
-
-          cursor: pointer;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          border: none;
 
           height: 72px;
 
-          font-family: 'DM Sans', sans-serif;
+          color: white;
+
+          cursor: pointer;
+
           font-size: 20px;
-          font-weight: 400;
 
-          border-radius: 2px;
-
-          user-select: none;
+          background:
+            rgba(255,255,255,.06);
 
           transition:
-            filter .1s,
-            transform .08s;
-
-          position: relative;
+            transform .08s,
+            filter .1s;
         }
 
-        .btn:active,
-        .btn.pressed {
-          transform: scale(.93);
-          filter: brightness(1.25);
+        .btn:hover {
+          filter: brightness(1.1);
         }
 
-        .btn-num {
-          background: rgba(255,255,255,.06);
-          color: #fff;
-        }
-
-        .btn-num:hover {
-          background: rgba(255,255,255,.1);
-        }
-
-        .btn-fn {
-          background: rgba(255,255,255,.12);
-          color: rgba(255,255,255,.75);
-
-          font-size: 18px;
-        }
-
-        .btn-fn:hover {
-          background: rgba(255,255,255,.18);
+        .btn:active {
+          transform: scale(.94);
         }
 
         .btn-op {
-          background: rgba(255,80,60,.18);
+          background:
+            rgba(255,80,60,.18);
+
           color: #ff6a56;
-          font-weight: 500;
         }
 
-        .btn-op:hover {
-          background: rgba(255,80,60,.28);
+        .btn-fn {
+          background:
+            rgba(255,255,255,.12);
         }
 
         .btn-eq {
@@ -547,182 +668,169 @@ export default function Calculator() {
               #ff3c50,
               #ff7e30
             );
-
-          color: #fff;
-          font-weight: 500;
-
-          box-shadow:
-            0 2px 16px rgba(255,60,80,.3);
-        }
-
-        .btn-eq:hover {
-          filter: brightness(1.1);
         }
 
         .btn-span {
           grid-column: span 2;
         }
 
-        /* ── Alert overlay ── */
+        /* ── ALERT ───────────────────────────── */
+
         .overlay {
           position: fixed;
           inset: 0;
-          z-index: 50;
 
-          background: rgba(0,0,0,.7);
+          background:
+            rgba(0,0,0,.72);
 
-          backdrop-filter: blur(8px);
+          backdrop-filter: blur(10px);
+
+          z-index: 100;
 
           display: flex;
           align-items: center;
           justify-content: center;
-
-          animation: fadeIn .25s ease;
-        }
-
-        @keyframes fadeIn {
-          from {
-            opacity:0;
-          }
-
-          to {
-            opacity:1;
-          }
         }
 
         .alert-box {
-          background: #0f0f16;
+          width: 92%;
+          max-width: 520px;
 
-          border: 1px solid rgba(255,60,80,.35);
+          background: #111118;
 
-          border-radius: 20px;
+          border-radius: 24px;
 
-          padding: 32px 36px;
+          padding: 28px;
 
-          max-width: 400px;
-          width: 90%;
-
-          box-shadow:
-            0 0 0 1px rgba(255,60,80,.12),
-            0 32px 80px rgba(0,0,0,.7),
-            0 0 60px rgba(255,60,80,.08);
-
-          animation:
-            popIn .3s cubic-bezier(.34,1.56,.64,1);
+          border:
+            1px solid rgba(255,255,255,.08);
         }
 
-        @keyframes popIn {
-          from {
-            transform: scale(.8);
-            opacity: 0;
+        .alert-title {
+          color: white;
+
+          font-size: 24px;
+          font-weight: bold;
+
+          margin-bottom: 16px;
+        }
+
+        .recording {
+          margin-bottom: 20px;
+
+          padding: 14px 16px;
+
+          border-radius: 14px;
+
+          background:
+            rgba(255,60,80,.14);
+
+          color: #ff6575;
+
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .record-dot {
+          width: 12px;
+          height: 12px;
+
+          border-radius: 999px;
+
+          background: #ff3c50;
+
+          animation:
+            pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+          0% {
+            opacity: 1;
           }
 
-          to {
-            transform: scale(1);
+          50% {
+            opacity: .3;
+          }
+
+          100% {
             opacity: 1;
           }
         }
 
-        .alert-icon {
-          font-size: 36px;
-          text-align: center;
-          margin-bottom: 16px;
-        }
-
-        .alert-title {
-          font-family: 'DM Mono', monospace;
-          font-size: 11px;
-          letter-spacing: .2em;
-          text-transform: uppercase;
-
-          color: #ff3c50;
-
-          margin-bottom: 20px;
-
-          text-align: center;
-        }
-
-        .alert-row {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-
-          margin-bottom: 24px;
-        }
-
         .alert-field {
-          background: rgba(255,255,255,.04);
+          margin-bottom: 14px;
 
-          border: 1px solid rgba(255,255,255,.07);
+          padding: 14px;
 
-          border-radius: 10px;
+          border-radius: 14px;
 
-          padding: 12px 16px;
+          background:
+            rgba(255,255,255,.04);
         }
 
         .alert-label {
-          font-family: 'DM Mono', monospace;
-          font-size: 10px;
-          letter-spacing: .15em;
+          color:
+            rgba(255,255,255,.45);
+
+          font-size: 11px;
+
+          margin-bottom: 6px;
+
           text-transform: uppercase;
-
-          color: rgba(255,255,255,.35);
-
-          margin-bottom: 4px;
         }
 
         .alert-value {
-          font-size: 15px;
-          font-weight: 500;
-          color: #fff;
+          color: white;
         }
 
-        .alert-value.danger {
-          color: #ff3c50;
+        .video-preview {
+          width: 100%;
+
+          border-radius: 16px;
+
+          overflow: hidden;
+
+          margin-top: 18px;
+
+          background: black;
         }
 
-        .alert-value.ok {
-          color: #34d399;
+        .video-preview video {
+          width: 100%;
+          display: block;
         }
 
         .alert-close {
-          all: unset;
-
-          cursor: pointer;
+          margin-top: 18px;
 
           width: 100%;
 
-          padding: 13px;
+          height: 48px;
 
-          border-radius: 10px;
+          border: none;
+          border-radius: 14px;
 
-          background: rgba(255,60,80,.15);
+          background:
+            rgba(255,60,80,.18);
 
-          border: 1px solid rgba(255,60,80,.3);
+          color: #ff6473;
 
-          color: #ff3c50;
+          cursor: pointer;
 
-          font-family: 'DM Mono', monospace;
-          font-size: 13px;
-          letter-spacing: .1em;
-          text-transform: uppercase;
-
-          text-align: center;
-
-          transition: background .15s;
-        }
-
-        .alert-close:hover {
-          background: rgba(255,60,80,.25);
+          font-size: 15px;
+          font-weight: bold;
         }
       `}</style>
 
       <div className="bg" />
 
       <div className="wrapper">
-        {/* Hold hint */}
+        {/* HOLD BAR */}
         <div className="hint">
-          <span>mantén ESPACIO para alerta</span>
+          <span>
+            Hold SPACE for emergency
+          </span>
 
           <div className="hint-bar">
             <div
@@ -734,19 +842,20 @@ export default function Calculator() {
           </div>
         </div>
 
-        {/* Calculator */}
+        {/* CALCULATOR */}
         <div className="calc">
-          {/* SETTINGS BUTTON */}
           <button
             className="settings-btn"
-            onClick={() => router.push("/api")}
+            onClick={() =>
+              router.push("/settings")
+            }
           >
             ⚙
           </button>
 
           <div className="display">
             <div className="display-sub">
-              {stored !== null && operator
+              {stored && operator
                 ? `${stored} ${operator}`
                 : ""}
             </div>
@@ -757,118 +866,145 @@ export default function Calculator() {
           </div>
 
           <div className="grid">
-            {keys.map(({ label, key, span, type }) => (
-              <button
-                key={label}
-                className={[
-                  "btn",
+            {keys.map(
+              ({
+                label,
+                key,
+                span,
+                type,
+              }) => (
+                <button
+                  key={label}
+                  className={[
+                    "btn",
 
-                  type === "num"
-                    ? "btn-num"
-                    : type === "fn"
-                    ? "btn-fn"
-                    : "btn-op",
+                    type === "op"
+                      ? "btn-op"
+                      : "",
 
-                  key === "="
-                    ? "btn-eq"
-                    : "",
+                    type === "fn"
+                      ? "btn-fn"
+                      : "",
 
-                  span
-                    ? "btn-span"
-                    : "",
+                    key === "="
+                      ? "btn-eq"
+                      : "",
 
-                  pressedKey === label
-                    ? "pressed"
-                    : "",
-                ].join(" ")}
-                onPointerDown={() => {
-                  setPressedKey(label);
-                }}
-                onPointerUp={() => {
-                  setPressedKey(null);
-                  handleKey(key);
-                }}
-                onPointerLeave={() => {
-                  setPressedKey(null);
-                }}
-              >
-                {label}
-              </button>
-            ))}
+                    span
+                      ? "btn-span"
+                      : "",
+                  ].join(" ")}
+                  onPointerDown={() =>
+                    setPressedKey(label)
+                  }
+                  onPointerUp={() => {
+                    setPressedKey(null);
+
+                    handleKey(key);
+                  }}
+                  onPointerLeave={() =>
+                    setPressedKey(null)
+                  }
+                >
+                  {label}
+                </button>
+              )
+            )}
           </div>
         </div>
       </div>
 
-      {/* Emergency Alert */}
+      {/* ALERT + VIDEO */}
       {showAlert && (
         <div
           className="overlay"
           onClick={() => {
             setShowAlert(false);
-            setHoldProgress(0);
           }}
         >
           <div
             className="alert-box"
-            onClick={e => e.stopPropagation()}
+            onClick={e =>
+              e.stopPropagation()
+            }
           >
-            <div className="alert-icon">
-              🚨
-            </div>
-
             <div className="alert-title">
-              ⚠ Alerta de emergencia
+              🚨 Emergency Triggered
             </div>
 
-            <div className="alert-row">
-              <div className="alert-field">
-                <div className="alert-label">
-                  Persona en riesgo
-                </div>
-
-                <div className="alert-value danger">
-                  {ALERT_INFO.name}
-                </div>
-              </div>
-
-              <div className="alert-field">
-                <div className="alert-label">
-                  Ubicación
-                </div>
-
-                <div className="alert-value">
-                  {ALERT_INFO.live_location}
-                </div>
-              </div>
-
-              <div className="alert-field">
-                <div className="alert-label">
-                  Modo offline
-                </div>
-
+            {isRecording && (
+              <div className="recording">
                 <div
-                  className={`alert-value ${
-                    ALERT_INFO.offline === "yes"
-                      ? "danger"
-                      : "ok"
-                  }`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
                 >
-                  {ALERT_INFO.offline === "yes"
-                    ? "🔴 Sin conexión"
-                    : "🟢 En línea"}
+                  <div className="record-dot" />
+
+                  <span>
+                    Recording video...
+                  </span>
                 </div>
+
+                <strong>
+                  {recordingCountdown}s
+                </strong>
+              </div>
+            )}
+
+            <div className="alert-field">
+              <div className="alert-label">
+                Person at risk
+              </div>
+
+              <div className="alert-value">
+                {ALERT_INFO.name}
               </div>
             </div>
+
+            <div className="alert-field">
+              <div className="alert-label">
+                Location
+              </div>
+
+              <div className="alert-value">
+                {ALERT_INFO.live_location}
+              </div>
+            </div>
+
+            <div className="alert-field">
+              <div className="alert-label">
+                Offline mode
+              </div>
+
+              <div className="alert-value">
+                {ALERT_INFO.offline ===
+                "yes"
+                  ? "🔴 Offline"
+                  : "🟢 Online"}
+              </div>
+            </div>
+
+            {videoUrl && (
+              <div className="video-preview">
+                <video
+                  src={videoUrl}
+                  controls
+                  autoPlay
+                />
+              </div>
+            )}
 
             <button
               style={{ width: "92%", maxWidth: 420 }}
               className="alert-close"
               onClick={() => {
                 setShowAlert(false);
-                setHoldProgress(0);
               }}
             >
-              Cerrar alerta
+              Close Alert
             </button>
           </div>
         </div>
