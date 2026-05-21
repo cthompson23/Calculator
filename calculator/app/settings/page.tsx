@@ -742,7 +742,7 @@ export default function Settings() {
         </div>
 
         {/* Save button */}
-        <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ width: 150, maxWidth: 420 }}>
           <button className="btn-primary" onClick={handleSave}>
             Guardar cambios
           </button>

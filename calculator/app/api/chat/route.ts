@@ -1,113 +1,102 @@
 import { NextResponse } from "next/server";
 
-function randomItem(arr: string[]) {
+function pick(arr: string[]) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function normalize(text: string) {
+  return text.toLowerCase();
+}
+
 function generateReply(message: string) {
-  const msg = message.toLowerCase();
+  const msg = normalize(message);
 
-  // Emergencia
+  // 🚨 EMERGENCIA DIRECTA
   if (
+    msg.includes("me están atacando") ||
+    msg.includes("me quieren hacer daño") ||
+    msg.includes("emergencia") ||
+    msg.includes("ayuda") && msg.includes("ahora")
+  ) {
+    return pick([
+      "Entiendo que estás en una situación de emergencia. Si puedes, llama al número local de emergencias inmediatamente.",
+      "Tu seguridad es lo más importante. Intenta ponerte en un lugar seguro y contacta ayuda ahora mismo.",
+      "Si estás en peligro inmediato, busca un lugar seguro y llama a emergencias.",
+    ]);
+  }
+
+  // 🚨 ABUSO / VIOLENCIA
+  if (
+    msg.includes("me golpean") ||
+    msg.includes("me maltratan") ||
+    msg.includes("abuso") ||
+    msg.includes("violencia")
+  ) {
+    return pick([
+      "Esto que describes es serio. Estamos transfiriendote con un profesional",
+    ]);
+  }
+
+
+  if (
+    msg.includes("me controla") ||
+    msg.includes("no me deja salir") ||
+    msg.includes("celoso") ||
+    msg.includes("me revisa el celular")
+  ) {
+    return pick([
+      "Eso puede ser una señal de control o abuso. Es importante que hables con alguien de confianza.",
+      "Nadie debería controlar tu libertad o privacidad. ¿Hay alguien seguro con quien puedas hablar?",
+      "Lo que describes no es saludable. Considera buscar apoyo externo.",
+    ]);
+  }
+
+
+  if (
+    msg.includes("tengo miedo") ||
+    msg.includes("no me siento seguro") ||
+    msg.includes("me persiguen")
+  ) {
+    return pick([
+      "Siento que estés pasando por eso. ¿Estás en un lugar seguro ahora mismo?",
+      "Si estás en peligro, intenta moverte a un lugar con otras personas.",
+      "Tu seguridad es lo más importante ahora.",
+    ]);
+  }
+
+  if (
+    msg.includes("qué hago") ||
     msg.includes("ayuda") ||
-    msg.includes("socorro") ||
-    msg.includes("emergencia")
+    msg.includes("consejo")
   ) {
-    return randomItem([
-      "Estoy notificando a tus contactos de emergencia.",
-      "Tu alerta fue enviada correctamente.",
-      "Se detectó una posible emergencia.",
+    return pick([
+      "Lo primero es asegurar tu seguridad física. ¿Estás en un lugar seguro?",
+      "Podría ayudarte mejor si me cuentas si estás en peligro inmediato.",
+      "Si hay riesgo, intenta contactar a alguien cercano o servicios de emergencia.",
     ]);
   }
 
-  // Peligro
-  if (
-    msg.includes("peligro") ||
-    msg.includes("arma") ||
-    msg.includes("asalto") ||
-    msg.includes("robo")
-  ) {
-    return randomItem([
-      "Zona marcada como potencialmente peligrosa.",
-      "Gracias por reportar esta situación.",
-      "El incidente fue registrado.",
-    ]);
+  if (msg.includes("hola") || msg.includes("hey")) {
+    return "Hola. Estoy aquí para ayudarte si estás en una situación difícil o de riesgo.";
   }
 
-  // Ubicación
-  if (
-    msg.includes("ubicacion") ||
-    msg.includes("ubicación") ||
-    msg.includes("gps")
-  ) {
-    return randomItem([
-      "Compartiendo ubicación en tiempo real.",
-      "Tu ubicación fue actualizada.",
-      "Ubicación enviada a tus contactos.",
-    ]);
-  }
-
-  // Saludos
-  if (
-    msg.includes("hola") ||
-    msg.includes("buenas") ||
-    msg.includes("hey")
-  ) {
-    return randomItem([
-      "Hola ¿Cómo puedo ayudarte?",
-      "¡Hola! Estoy aquí para ayudarte.",
-      "Hola, ¿qué sucede?",
-    ]);
-  }
-
-  // Despedidas
-  if (
-    msg.includes("gracias") ||
-    msg.includes("bye") ||
-    msg.includes("adios")
-  ) {
-    return randomItem([
-      "Estoy para ayudarte.",
-      "Cuídate mucho.",
-      "Gracias por usar SafeZone.",
-    ]);
-  }
-
-  // Preguntas
-  if (msg.includes("?")) {
-    return randomItem([
-      "Estoy analizando tu consulta.",
-      "Procesando información...",
-      "Intentaré ayudarte con eso.",
-    ]);
-  }
-
-  // Fallback inteligente
-  return randomItem([
-    "Mensaje recibido correctamente.",
-    "Entendido.",
-    "Procesando información.",
-    "Tu reporte fue guardado.",
-    "Gracias por la información.",
+  return pick([
+    "Gracias por contarme esto. ¿Te encuentras en una situación segura ahora?",
+    "Entiendo. Si esto representa un riesgo, intenta buscar apoyo de alguien cercano.",
+    "Estoy aquí para ayudarte. ¿Quieres contarme un poco más?",
   ]);
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-
-    const message = body.message;
+    const { message } = await req.json();
 
     const reply = generateReply(message);
 
+    return NextResponse.json({ reply });
+  } catch (e) {
     return NextResponse.json({
-      reply,
-    });
-  } catch (error) {
-    console.error(error);
-
-    return NextResponse.json({
-      reply: "Ocurrió un error.",
+      reply: "Ocurrió un error procesando tu mensaje.",
     });
   }
 }
