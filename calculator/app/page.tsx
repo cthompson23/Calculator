@@ -9,6 +9,24 @@ import {
 
 import { useRouter } from "next/navigation";
 
+
+declare global {
+  interface BatteryManager extends EventTarget {
+    charging: boolean;
+    level: number;
+
+    addEventListener(
+      type: "chargingchange" | "levelchange",
+      listener: EventListenerOrEventListenerObject
+    ): void;
+  }
+
+  interface Navigator {
+    getBattery?: () => Promise<BatteryManager>;
+  }
+}
+
+export {};
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AlertInfo {
   name: string;
@@ -17,10 +35,25 @@ interface AlertInfo {
 }
 
 type CalcKey =
-  | "0" | "1" | "2" | "3" | "4"
-  | "5" | "6" | "7" | "8" | "9"
-  | "." | "+" | "-" | "*" | "/"
-  | "=" | "C" | "±" | "%";
+  | "0"
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9"
+  | "."
+  | "+"
+  | "-"
+  | "*"
+  | "/"
+  | "="
+  | "C"
+  | "±"
+  | "%";
 
 // ─── Demo user info ───────────────────────────────────────────────────────────
 const ALERT_INFO: AlertInfo = {
@@ -60,7 +93,19 @@ function evaluate(
       return b;
   }
 }
+interface BatteryManager extends EventTarget {
+  charging: boolean;
+  level: number;
 
+  addEventListener(
+    type: "chargingchange" | "levelchange",
+    listener: EventListenerOrEventListenerObject
+  ): void;
+}
+
+interface Navigator {
+  getBattery?: () => Promise<BatteryManager>;
+}
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Calculator() {
   const router = useRouter();
@@ -86,7 +131,8 @@ export default function Calculator() {
   // ── Alert/video state ─────────────────────────────────────────────────────
   const [showAlert, setShowAlert] = useState(false);
 
-  const [isRecording, setIsRecording] = useState(false);
+  const [isRecording, setIsRecording] =
+    useState(false);
 
   const [recordingCountdown, setRecordingCountdown] =
     useState(10);
@@ -94,11 +140,21 @@ export default function Calculator() {
   const [videoUrl, setVideoUrl] =
     useState<string | null>(null);
 
+  // ── Battery state ─────────────────────────────────────────────────────────
+  const [batteryLevel, setBatteryLevel] =
+    useState<number | null>(null);
+
+  const [isCharging, setIsCharging] =
+    useState(false);
+
   // ── Refs ──────────────────────────────────────────────────────────────────
-  const spaceHoldStart = useRef<number | null>(null);
+  const spaceHoldStart =
+    useRef<number | null>(null);
 
   const holdTimer =
-    useRef<ReturnType<typeof setInterval> | null>(null);
+    useRef<ReturnType<typeof setInterval> | null>(
+      null
+    );
 
   const alertFiredRef = useRef(false);
 
@@ -108,10 +164,14 @@ export default function Calculator() {
   const recordedChunksRef = useRef<Blob[]>([]);
 
   const recordingTimeoutRef =
-    useRef<ReturnType<typeof setTimeout> | null>(null);
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
 
   const countdownIntervalRef =
-    useRef<ReturnType<typeof setInterval> | null>(null);
+    useRef<ReturnType<typeof setInterval> | null>(
+      null
+    );
 
   const streamRef =
     useRef<MediaStream | null>(null);
@@ -135,7 +195,9 @@ export default function Calculator() {
 
       recorder.ondataavailable = event => {
         if (event.data.size > 0) {
-          recordedChunksRef.current.push(event.data);
+          recordedChunksRef.current.push(
+            event.data
+          );
         }
       };
 
@@ -147,13 +209,14 @@ export default function Calculator() {
           }
         );
 
-        const url = URL.createObjectURL(blob);
+        const url =
+          URL.createObjectURL(blob);
 
         setVideoUrl(url);
 
-        stream.getTracks().forEach(track =>
-          track.stop()
-        );
+        stream
+          .getTracks()
+          .forEach(track => track.stop());
 
         setIsRecording(false);
       };
@@ -164,25 +227,25 @@ export default function Calculator() {
 
       setRecordingCountdown(10);
 
-      // countdown UI
-      countdownIntervalRef.current = setInterval(() => {
-        setRecordingCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(
-              countdownIntervalRef.current!
-            );
+      countdownIntervalRef.current =
+        setInterval(() => {
+          setRecordingCountdown(prev => {
+            if (prev <= 1) {
+              clearInterval(
+                countdownIntervalRef.current!
+              );
 
-            return 0;
-          }
+              return 0;
+            }
 
-          return prev - 1;
-        });
-      }, 1000);
+            return prev - 1;
+          });
+        }, 1000);
 
-      // stop after 10 sec
-      recordingTimeoutRef.current = setTimeout(() => {
-        recorder.stop();
-      }, RECORDING_DURATION_MS);
+      recordingTimeoutRef.current =
+        setTimeout(() => {
+          recorder.stop();
+        }, RECORDING_DURATION_MS);
     } catch (err) {
       console.error(err);
 
@@ -192,9 +255,10 @@ export default function Calculator() {
     }
   };
 
-  // ── Spacebar hold listeners ───────────────────────────────────────────────
+  // ── Hold logic ────────────────────────────────────────────────────────────
   const startHold = useCallback(() => {
-    if (spaceHoldStart.current !== null) return;
+    if (spaceHoldStart.current !== null)
+      return;
 
     alertFiredRef.current = false;
 
@@ -203,7 +267,8 @@ export default function Calculator() {
     holdTimer.current = setInterval(() => {
       const elapsed =
         Date.now() -
-        (spaceHoldStart.current ?? Date.now());
+        (spaceHoldStart.current ??
+          Date.now());
 
       const progress = Math.min(
         (elapsed / HOLD_THRESHOLD_MS) * 100,
@@ -245,15 +310,22 @@ export default function Calculator() {
 
   // ── Keyboard listeners ────────────────────────────────────────────────────
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !e.repeat) {
+    const onKeyDown = (
+      e: KeyboardEvent
+    ) => {
+      if (
+        e.code === "Space" &&
+        !e.repeat
+      ) {
         e.preventDefault();
 
         startHold();
       }
     };
 
-    const onKeyUp = (e: KeyboardEvent) => {
+    const onKeyUp = (
+      e: KeyboardEvent
+    ) => {
       if (e.code === "Space") {
         e.preventDefault();
 
@@ -261,9 +333,15 @@ export default function Calculator() {
       }
     };
 
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener(
+      "keydown",
+      onKeyDown
+    );
 
-    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener(
+      "keyup",
+      onKeyUp
+    );
 
     return () => {
       window.removeEventListener(
@@ -278,18 +356,74 @@ export default function Calculator() {
     };
   }, [startHold, endHold]);
 
+  // ── Battery API ───────────────────────────────────────────────────────────
+useEffect(() => {
+  const loadBattery = async () => {
+    try {
+      if (!navigator.getBattery) {
+        console.log(
+          "Battery API not supported"
+        );
+
+        return;
+      }
+
+      const battery =
+        await navigator.getBattery();
+
+      const updateBattery = () => {
+        setBatteryLevel(
+          Math.round(
+            battery.level * 100
+          )
+        );
+
+        setIsCharging(
+          battery.charging
+        );
+      };
+
+      updateBattery();
+
+      battery.addEventListener(
+        "levelchange",
+        updateBattery
+      );
+
+      battery.addEventListener(
+        "chargingchange",
+        updateBattery
+      );
+    } catch (err) {
+      console.log(
+        "Battery API failed"
+      );
+    }
+  };
+
+  loadBattery();
+}, []);
+
   // ── Cleanup ───────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (holdTimer.current) {
-        clearInterval(holdTimer.current);
+        clearInterval(
+          holdTimer.current
+        );
       }
 
-      if (recordingTimeoutRef.current) {
-        clearTimeout(recordingTimeoutRef.current);
+      if (
+        recordingTimeoutRef.current
+      ) {
+        clearTimeout(
+          recordingTimeoutRef.current
+        );
       }
 
-      if (countdownIntervalRef.current) {
+      if (
+        countdownIntervalRef.current
+      ) {
         clearInterval(
           countdownIntervalRef.current
         );
@@ -359,7 +493,11 @@ export default function Calculator() {
   };
 
   const handleEquals = () => {
-    if (!operator || stored === null) return;
+    if (
+      !operator ||
+      stored === null
+    )
+      return;
 
     const result = evaluate(
       stored,
@@ -430,43 +568,128 @@ export default function Calculator() {
     }
   };
 
-  // ── Layout ────────────────────────────────────────────────────────────────
-const keys: {
-  label: string;
-  key: CalcKey;
-  type: "fn" | "op" | "num";
-  span?: boolean;
-}[] = [
-  { label: "C", key: "C", type: "fn" },
-  { label: "±", key: "±", type: "fn" },
-  { label: "%", key: "%", type: "fn" },
-  { label: "÷", key: "/", type: "op" },
+  // ── Keys ──────────────────────────────────────────────────────────────────
+  const keys: {
+    label: string;
+    key: CalcKey;
+    type: "fn" | "op" | "num";
+    span?: boolean;
+  }[] = [
+    {
+      label: "C",
+      key: "C",
+      type: "fn",
+    },
 
-  { label: "7", key: "7", type: "num" },
-  { label: "8", key: "8", type: "num" },
-  { label: "9", key: "9", type: "num" },
-  { label: "×", key: "*", type: "op" },
+    {
+      label: "±",
+      key: "±",
+      type: "fn",
+    },
 
-  { label: "4", key: "4", type: "num" },
-  { label: "5", key: "5", type: "num" },
-  { label: "6", key: "6", type: "num" },
-  { label: "−", key: "-", type: "op" },
+    {
+      label: "%",
+      key: "%",
+      type: "fn",
+    },
 
-  { label: "1", key: "1", type: "num" },
-  { label: "2", key: "2", type: "num" },
-  { label: "3", key: "3", type: "num" },
-  { label: "+", key: "+", type: "op" },
+    {
+      label: "÷",
+      key: "/",
+      type: "op",
+    },
 
-  {
-    label: "0",
-    key: "0",
-    type: "num",
-    span: true,
-  },
+    {
+      label: "7",
+      key: "7",
+      type: "num",
+    },
 
-  { label: ".", key: ".", type: "num" },
-  { label: "=", key: "=", type: "op" },
-];
+    {
+      label: "8",
+      key: "8",
+      type: "num",
+    },
+
+    {
+      label: "9",
+      key: "9",
+      type: "num",
+    },
+
+    {
+      label: "×",
+      key: "*",
+      type: "op",
+    },
+
+    {
+      label: "4",
+      key: "4",
+      type: "num",
+    },
+
+    {
+      label: "5",
+      key: "5",
+      type: "num",
+    },
+
+    {
+      label: "6",
+      key: "6",
+      type: "num",
+    },
+
+    {
+      label: "−",
+      key: "-",
+      type: "op",
+    },
+
+    {
+      label: "1",
+      key: "1",
+      type: "num",
+    },
+
+    {
+      label: "2",
+      key: "2",
+      type: "num",
+    },
+
+    {
+      label: "3",
+      key: "3",
+      type: "num",
+    },
+
+    {
+      label: "+",
+      key: "+",
+      type: "op",
+    },
+
+    {
+      label: "0",
+      key: "0",
+      type: "num",
+      span: true,
+    },
+
+    {
+      label: ".",
+      key: ".",
+      type: "num",
+    },
+
+    {
+      label: "=",
+      key: "=",
+      type: "op",
+    },
+  ];
 
   return (
     <>
@@ -546,7 +769,8 @@ const keys: {
 
           width: 320px;
 
-          background: rgba(20,20,28,.85);
+          background:
+            rgba(20,20,28,.85);
 
           border-radius: 28px;
 
@@ -674,8 +898,6 @@ const keys: {
           grid-column: span 2;
         }
 
-        /* ── ALERT ───────────────────────────── */
-
         .overlay {
           position: fixed;
           inset: 0;
@@ -782,6 +1004,10 @@ const keys: {
 
         .alert-value {
           color: white;
+
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
 
         .video-preview {
@@ -826,7 +1052,6 @@ const keys: {
       <div className="bg" />
 
       <div className="wrapper">
-        {/* HOLD BAR */}
         <div className="hint">
           <span>
             Hold SPACE for emergency
@@ -842,7 +1067,6 @@ const keys: {
           </div>
         </div>
 
-        {/* CALCULATOR */}
         <div className="calc">
           <button
             className="settings-btn"
@@ -914,13 +1138,12 @@ const keys: {
         </div>
       </div>
 
-      {/* ALERT + VIDEO */}
       {showAlert && (
         <div
           className="overlay"
-          onClick={() => {
-            setShowAlert(false);
-          }}
+          onClick={() =>
+            setShowAlert(false)
+          }
         >
           <div
             className="alert-box"
@@ -987,22 +1210,53 @@ const keys: {
               </div>
             </div>
 
+            <div className="alert-field">
+              <div className="alert-label">
+                Battery
+              </div>
+
+              <div
+                className="alert-value"
+                style={{
+                  color:
+                    batteryLevel !==
+                      null &&
+                    batteryLevel <= 20
+                      ? "#ff5f5f"
+                      : "white",
+                }}
+              >
+                {batteryLevel !==
+                null ? (
+                  <>
+                    {isCharging
+                      ? "⚡"
+                      : "🔋"}
+
+                    {batteryLevel}%
+                  </>
+                ) : (
+                  "Unavailable"
+                )}
+              </div>
+            </div>
+
             {videoUrl && (
               <div className="video-preview">
                 <video
                   src={videoUrl}
                   controls
                   autoPlay
+                  playsInline
                 />
               </div>
             )}
 
             <button
-              style={{ width: "92%", maxWidth: 420 }}
               className="alert-close"
-              onClick={() => {
-                setShowAlert(false);
-              }}
+              onClick={() =>
+                setShowAlert(false)
+              }
             >
               Close Alert
             </button>
