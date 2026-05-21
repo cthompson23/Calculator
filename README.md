@@ -1,82 +1,174 @@
-# Calculator
-Idea: app de socorro
+# 🧮 Calculator
 
-Que sea secreta: una calculadora que en realidad manda las coordenadas actuales a una red de contactos (1) y un mensaje informando que se está en una situación de peligro.
+## 🚨 Idea
+**Calculator** es una calculadora aparentemente normal que oculta un sistema de emergencia discreto y avanzado.
 
-## Por considerar:
-1. Tiene que ser accesible.
-2. Tiene que ser usable.
-3. Cualquiera ha de ser capaz de usarlo (que la alfabetización digial no sea un problema).
+La app tiene dos modos de activación:
+- 🔢 Código secreto (ej. `911`)
+- ⌨️ **Hold prolongado de la barra espaciadora (Space Hold)**
 
-## Qué nos diferencia:
-¿Qué tiene esto de diferente a nada más llamar al 911?
-Al ser la interfaz una calculadora, es bastante natural y muy intuitivo.
+Ambos activan un protocolo de emergencia silencioso.
 
-Ya hay 1 en CR, pero aún así nosotros estamos atacando una vulnerabilidad que es la falta de discreción de la app Emergencias 911 CR.
+---
 
-Trabaja offline.
+## ⚠️ Modo de emergencia (Space Hold System)
 
+Si el usuario mantiene presionada la barra espaciadora durante unos segundos:
 
-## Ideas de diseño de UI:
-1. Que sea dark-themed para que así emita menos luz y sea más sutil.
+La aplicación activa un sistema automático de seguridad que recopila y envía:
 
+### 📡 Información enviada
+- Nombre del usuario
+- Ubicación en tiempo real
+- Nivel de batería del dispositivo
+- Estado de conectividad (online / offline)
+- Estado del sistema (timestamp del evento)
+- 📹 Grabación de video en tiempo real (si está disponible)
+- (Opcional) audio ambiental
 
-## Funcionalidad:
-1. Toco 2 botones
-2. Se llaman las autoridades, la red de contactos
-3. Off-line
-4. (Posible): chatbot especializado sobre cómo salir de la situación con IA para respuestas rápidas (2)
-5. Se envía el porcentaje de batería para saber si el teléfono del usuario ya no está disponible y su ubicación al momento de agotarse la batería.
+### 🚨 Activación progresiva
+- 0–3s: indicador visual de progreso
+- 3s+: activación automática del modo emergencia
+- Se envía información a red de contactos
 
-## Detalles de implementación:
-1. Rate limiter
+---
 
-## Pantallas:
-1. Pantalla principal: calculadora
-2. Pantalla de configuraciones: configurar la red de contactos, mi perfil
-3. Pantalla de chats
+## 🎯 Problema
+En situaciones de riesgo:
+- No es posible abrir apps específicas
+- No se puede marcar números de emergencia
+- El atacante puede estar observando el dispositivo
+- La víctima necesita una acción **discreta y natural**
 
-(1) La red de contactos es: autoridades oficiales, 911, contactos cercanos del usuario
-(2) El modelo de IA contará con información verificada profesionalmente y será sensible al tono de la conversación para identificar el nivel de riesgo de la situación del usuario.
+---
 
+## 💡 Solución
+Una calculadora que oculta un sistema de emergencia basado en:
+- Interacciones normales del teclado
+- Activación por presión prolongada
+- Envío automático de datos críticos
 
-Pasos
-1. Defino el problema
-2. Cómo voy a generar $$$
-    2.1. Si fuera patrocinado por el gobierno, cuál sería el presupuesto
-    2.2. Por ONG? Donaciones no sirve
-    2.3. Cómo voy a sostener el producto?
-3. Competidores: el dispositivo ya tiene un botón de SOS
-    3.1. Qué hacemos nosotros que esos botones no traigan ya? Conexión con WhatsApp? Eso vale $0.0125 notificación + notificación whats + servidores
-4. Cuál es la forma en que voy a convencer a todos de descargar nuestra app?
-5. Necesitamos una estrategia de monetización + marketing: gobierno + esparcimiento del conocimiento sobre la app en redes sociales
+Esto permite pedir ayuda sin levantar sospechas.
 
-PPT:
-1. Estadísticas de la situación: cuál es el costo de esto?
-Si usamos la app, entonces se reducen en 50% las desapariciones, entonces cuánto $$$ nos ganamos?
+---
 
-Slides:
-1. (emocional) Problema: María 
-2. (interesante) Mi mercado (mujeres, menores) y mi cliente (gobierno y lo que se gasta -$$$ en búsqueda de desaparecidos: gasolina, patrullas, etc., todo lo que se gasta en cada búsqueda)
-3. Mi solución
-4. Mi equipo: de dónde nace, por qué somos las personas indicadas para solucionar esto? Porque hemos tenido personas que han tenido experiencias afines, es importante que el sponsor sepa exactamente de qué es el proyecto
+## ⚙️ Cómo funciona
 
+### 1. Código secreto
+- El usuario escribe `911`
+- Se activa el modo emergencia inmediato
 
-1000000 notificaciones vale 
-6 millones notificaciones en Amazon vale $6
+### 2. Space Hold (modo silencioso)
+- Mantener presionada la barra espaciadora
+- Se activa un temporizador de seguridad
+- Al cumplirse el umbral:
+  - Se inicia grabación de video
+  - Se envía ubicación
+  - Se notifica a contactos de emergencia
+  - Se envía estado del dispositivo
 
+---
 
-15% valor 
-20% 
-10% escalabilidad
-15% demo y prototipo funcional
-25% pitch claro
+## 🌐 Red de emergencia
+Incluye:
+- Contactos personales del usuario
+- Servicios de emergencia (ej. 911)
+- (Futuro) sistemas institucionales de respuesta rápida
 
+---
 
+## 🔥 Diferenciación
+A diferencia de otras soluciones:
+- No requiere abrir una app de emergencia
+- Funciona desde una interfaz cotidiana (calculadora)
+- Permite activación **sin interacción explícita visible**
+- Incluye captura de evidencia (video + estado del dispositivo)
 
+---
 
-*
-* 
- Total de menores desaparecidos, el 65,34% han sido mujeres y el 34,66% hombres, y mientras un 5,06% de los menores desaparecidos siguen sin ser ubicados.
+## 📱 Pantallas
+1. **Calculadora principal**
+   - Interfaz normal
+   - Input secreto (`911`)
 
- 17,2% de la población adulta (personas de 18 años o más) vive con algún tipo de discapacidad.
+2. **Modo emergencia activo**
+   - Estado de envío de datos
+   - Indicador de grabación
+
+3. **Configuración**
+   - Red de contactos
+   - Permisos (cámara, ubicación, batería)
+
+---
+
+## ⚙️ Funcionalidades clave
+- Activación por código (`911`)
+- Activación por **hold spacebar**
+- Envío de:
+  - ubicación en tiempo real
+  - batería
+  - estado de conexión
+  - identidad del usuario
+- Grabación de video automática
+- Funcionamiento offline con envío diferido
+- Rate limiting y protección contra activaciones falsas
+
+---
+
+## 🧱 Consideraciones técnicas
+- Permisos de cámara y geolocalización
+- Streaming o buffer de video seguro
+- Encriptación de datos enviados
+- Fallback offline (cola de eventos)
+- Prevención de activaciones accidentales
+- Optimización de batería en segundo plano
+
+---
+
+## 📊 Impacto esperado
+- Reducción del tiempo de reacción en emergencias críticas
+- Mayor probabilidad de obtener evidencia (video)
+- Alternativa discreta a botones SOS tradicionales
+- Mejora en seguridad personal en entornos de riesgo
+
+---
+
+## 💰 Modelo de sostenibilidad (ideas)
+- Contratos con gobiernos (seguridad pública)
+- Integraciones con ONGs de protección
+- Licencias institucionales
+- Infraestructura de alertas y video en tiempo real
+
+---
+
+## 🏁 Estrategia de producto
+### Competencia
+- Botones SOS nativos en teléfonos
+- Apps de seguridad personal
+
+### Nuestra ventaja
+- Activación invisible (calculadora)
+- Doble trigger (código + hold)
+- Captura de evidencia (video + datos del dispositivo)
+- Diseñado para situaciones donde el usuario NO puede hablar ni interactuar libremente
+
+---
+
+## 🧪 MVP / Demo
+- Calculadora funcional
+- Código `911` activa alerta
+- Hold spacebar activa modo emergencia
+- Simulación de envío de:
+  - ubicación
+  - batería
+  - estado online/offline
+- Mock de grabación de video
+
+---
+
+## ⚠️ Nota importante
+Este sistema requiere diseño responsable en:
+- privacidad de video y datos personales
+- consentimiento explícito del usuario
+- prevención de abuso del sistema
+- falsos positivos en activación por teclado
