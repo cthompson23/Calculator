@@ -739,7 +739,7 @@ export default function Calculator() {
           {/* SETTINGS BUTTON */}
           <button
             className="settings-btn"
-            onClick={() => router.push("/settings")}
+            onClick={() => router.push("/api")}
           >
             ⚙
           </button>
