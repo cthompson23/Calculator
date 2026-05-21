@@ -76,4 +76,7 @@ Slides:
 
 
 *
+* 
+ Total de menores desaparecidos, el 65,34% han sido mujeres y el 34,66% hombres, y mientras un 5,06% de los menores desaparecidos siguen sin ser ubicados.
 
+ 17,2% de la población adulta (personas de 18 años o más) vive con algún tipo de discapacidad.
