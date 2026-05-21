@@ -3,6 +3,24 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
+
+declare global {
+  interface BatteryManager extends EventTarget {
+    charging: boolean;
+    level: number;
+
+    addEventListener(
+      type: "chargingchange" | "levelchange",
+      listener: EventListenerOrEventListenerObject
+    ): void;
+  }
+
+  interface Navigator {
+    getBattery?: () => Promise<BatteryManager>;
+  }
+}
+
+export {};
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AlertInfo {
   name: string;
@@ -11,8 +29,25 @@ interface AlertInfo {
 }
 
 type CalcKey =
-  | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
-  | "." | "+" | "-" | "*" | "/" | "=" | "C" | "±" | "%";
+  | "0"
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9"
+  | "."
+  | "+"
+  | "-"
+  | "*"
+  | "/"
+  | "="
+  | "C"
+  | "±"
+  | "%";
 
 // ─── Demo user info ───────────────────────────────────────────────────────────
 const ALERT_INFO: AlertInfo = {
@@ -47,7 +82,19 @@ function evaluate(a: string, op: string, b: string): string {
       return b;
   }
 }
+interface BatteryManager extends EventTarget {
+  charging: boolean;
+  level: number;
 
+  addEventListener(
+    type: "chargingchange" | "levelchange",
+    listener: EventListenerOrEventListenerObject
+  ): void;
+}
+
+interface Navigator {
+  getBattery?: () => Promise<BatteryManager>;
+}
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Calculator() {
   const router = useRouter();
@@ -62,14 +109,134 @@ export default function Calculator() {
 
   const [pressedKey, setPressedKey] = useState<string | null>(null);
 
-  const spaceHoldStart = useRef<number | null>(null);
-  const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isRecording, setIsRecording] =
+    useState(false);
+
+  const [recordingCountdown, setRecordingCountdown] =
+    useState(10);
+
+  const [videoUrl, setVideoUrl] =
+    useState<string | null>(null);
+
+  // ── Battery state ─────────────────────────────────────────────────────────
+  const [batteryLevel, setBatteryLevel] =
+    useState<number | null>(null);
+
+  const [isCharging, setIsCharging] =
+    useState(false);
+
+  // ── Refs ──────────────────────────────────────────────────────────────────
+  const spaceHoldStart =
+    useRef<number | null>(null);
+
+  const holdTimer =
+    useRef<ReturnType<typeof setInterval> | null>(
+      null
+    );
 
   const alertFiredRef = useRef(false);
 
-  // ── Spacebar hold listeners ────────────────────────────────────────────────
+  const mediaRecorderRef =
+    useRef<MediaRecorder | null>(null);
+
+  const recordedChunksRef = useRef<Blob[]>([]);
+
+  const recordingTimeoutRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+
+  const countdownIntervalRef =
+    useRef<ReturnType<typeof setInterval> | null>(
+      null
+    );
+
+  const streamRef =
+    useRef<MediaStream | null>(null);
+
+  // ── Start recording ───────────────────────────────────────────────────────
+  const startRecording = async () => {
+    try {
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+
+      streamRef.current = stream;
+
+      const recorder = new MediaRecorder(stream);
+
+      mediaRecorderRef.current = recorder;
+
+      recordedChunksRef.current = [];
+
+      recorder.ondataavailable = event => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(
+            event.data
+          );
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(
+          recordedChunksRef.current,
+          {
+            type: "video/webm",
+          }
+        );
+
+        const url =
+          URL.createObjectURL(blob);
+
+        setVideoUrl(url);
+
+        stream
+          .getTracks()
+          .forEach(track => track.stop());
+
+        setIsRecording(false);
+      };
+
+      recorder.start();
+
+      setIsRecording(true);
+
+      setRecordingCountdown(10);
+
+      countdownIntervalRef.current =
+        setInterval(() => {
+          setRecordingCountdown(prev => {
+            if (prev <= 1) {
+              clearInterval(
+                countdownIntervalRef.current!
+              );
+
+              return 0;
+            }
+
+            return prev - 1;
+          });
+        }, 1000);
+
+      recordingTimeoutRef.current =
+        setTimeout(() => {
+          recorder.stop();
+        }, RECORDING_DURATION_MS);
+    } catch (err) {
+      console.error(err);
+
+      alert(
+        "Camera/microphone access denied."
+      );
+    }
+  };
+
+  // ── Hold logic ────────────────────────────────────────────────────────────
   const startHold = useCallback(() => {
-    if (spaceHoldStart.current !== null) return;
+    if (spaceHoldStart.current !== null)
+      return;
 
     alertFiredRef.current = false;
 
@@ -77,7 +244,9 @@ export default function Calculator() {
 
     holdTimer.current = setInterval(() => {
       const elapsed =
-        Date.now() - (spaceHoldStart.current ?? Date.now());
+        Date.now() -
+        (spaceHoldStart.current ??
+          Date.now());
 
       const progress = Math.min(
         (elapsed / HOLD_THRESHOLD_MS) * 100,
@@ -112,22 +281,36 @@ export default function Calculator() {
   }, []);
 
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !e.repeat) {
+    const onKeyDown = (
+      e: KeyboardEvent
+    ) => {
+      if (
+        e.code === "Space" &&
+        !e.repeat
+      ) {
         e.preventDefault();
         startHold();
       }
     };
 
-    const onKeyUp = (e: KeyboardEvent) => {
+    const onKeyUp = (
+      e: KeyboardEvent
+    ) => {
       if (e.code === "Space") {
         e.preventDefault();
         endHold();
       }
     };
 
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener(
+      "keydown",
+      onKeyDown
+    );
+
+    window.addEventListener(
+      "keyup",
+      onKeyUp
+    );
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
@@ -135,9 +318,82 @@ export default function Calculator() {
     };
   }, [startHold, endHold]);
 
+  // ── Battery API ───────────────────────────────────────────────────────────
+useEffect(() => {
+  const loadBattery = async () => {
+    try {
+      if (!navigator.getBattery) {
+        console.log(
+          "Battery API not supported"
+        );
+
+        return;
+      }
+
+      const battery =
+        await navigator.getBattery();
+
+      const updateBattery = () => {
+        setBatteryLevel(
+          Math.round(
+            battery.level * 100
+          )
+        );
+
+        setIsCharging(
+          battery.charging
+        );
+      };
+
+      updateBattery();
+
+      battery.addEventListener(
+        "levelchange",
+        updateBattery
+      );
+
+      battery.addEventListener(
+        "chargingchange",
+        updateBattery
+      );
+    } catch (err) {
+      console.log(
+        "Battery API failed"
+      );
+    }
+  };
+
+  loadBattery();
+}, []);
+
+  // ── Cleanup ───────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      if (holdTimer.current) clearInterval(holdTimer.current);
+      if (holdTimer.current) {
+        clearInterval(
+          holdTimer.current
+        );
+      }
+
+      if (
+        recordingTimeoutRef.current
+      ) {
+        clearTimeout(
+          recordingTimeoutRef.current
+        );
+      }
+
+      if (
+        countdownIntervalRef.current
+      ) {
+        clearInterval(
+          countdownIntervalRef.current
+        );
+      }
+
+      streamRef.current
+        ?.getTracks()
+        .forEach(track => track.stop());
     };
   }, []);
 
@@ -187,7 +443,11 @@ export default function Calculator() {
   };
 
   const handleEquals = () => {
-    if (!operator || stored === null) return;
+    if (
+      !operator ||
+      stored === null
+    )
+      return;
 
     const result = evaluate(stored, operator, display);
 
@@ -250,36 +510,127 @@ export default function Calculator() {
     }
   };
 
-  // ── Layout ────────────────────────────────────────────────────────────────
+  // ── Keys ──────────────────────────────────────────────────────────────────
   const keys: {
     label: string;
     key: CalcKey;
-    span?: boolean;
     type: "fn" | "op" | "num";
+    span?: boolean;
   }[] = [
-    { label: "C", key: "C", type: "fn" },
-    { label: "±", key: "±", type: "fn" },
-    { label: "%", key: "%", type: "fn" },
-    { label: "÷", key: "/", type: "op" },
+    {
+      label: "C",
+      key: "C",
+      type: "fn",
+    },
 
-    { label: "7", key: "7", type: "num" },
-    { label: "8", key: "8", type: "num" },
-    { label: "9", key: "9", type: "num" },
-    { label: "×", key: "*", type: "op" },
+    {
+      label: "±",
+      key: "±",
+      type: "fn",
+    },
 
-    { label: "4", key: "4", type: "num" },
-    { label: "5", key: "5", type: "num" },
-    { label: "6", key: "6", type: "num" },
-    { label: "−", key: "-", type: "op" },
+    {
+      label: "%",
+      key: "%",
+      type: "fn",
+    },
 
-    { label: "1", key: "1", type: "num" },
-    { label: "2", key: "2", type: "num" },
-    { label: "3", key: "3", type: "num" },
-    { label: "+", key: "+", type: "op" },
+    {
+      label: "÷",
+      key: "/",
+      type: "op",
+    },
 
-    { label: "0", key: "0", type: "num", span: true },
-    { label: ".", key: ".", type: "num" },
-    { label: "=", key: "=", type: "op" },
+    {
+      label: "7",
+      key: "7",
+      type: "num",
+    },
+
+    {
+      label: "8",
+      key: "8",
+      type: "num",
+    },
+
+    {
+      label: "9",
+      key: "9",
+      type: "num",
+    },
+
+    {
+      label: "×",
+      key: "*",
+      type: "op",
+    },
+
+    {
+      label: "4",
+      key: "4",
+      type: "num",
+    },
+
+    {
+      label: "5",
+      key: "5",
+      type: "num",
+    },
+
+    {
+      label: "6",
+      key: "6",
+      type: "num",
+    },
+
+    {
+      label: "−",
+      key: "-",
+      type: "op",
+    },
+
+    {
+      label: "1",
+      key: "1",
+      type: "num",
+    },
+
+    {
+      label: "2",
+      key: "2",
+      type: "num",
+    },
+
+    {
+      label: "3",
+      key: "3",
+      type: "num",
+    },
+
+    {
+      label: "+",
+      key: "+",
+      type: "op",
+    },
+
+    {
+      label: "0",
+      key: "0",
+      type: "num",
+      span: true,
+    },
+
+    {
+      label: ".",
+      key: ".",
+      type: "num",
+    },
+
+    {
+      label: "=",
+      key: "=",
+      type: "op",
+    },
   ];
 
   return (
@@ -374,7 +725,8 @@ export default function Calculator() {
 
           width: 320px;
 
-          background: rgba(20,20,28,.85);
+          background:
+            rgba(20,20,28,.85);
 
           backdrop-filter: blur(24px);
 
@@ -563,7 +915,6 @@ export default function Calculator() {
           grid-column: span 2;
         }
 
-        /* ── Alert overlay ── */
         .overlay {
           position: fixed;
           inset: 0;
@@ -672,9 +1023,11 @@ export default function Calculator() {
         }
 
         .alert-value {
-          font-size: 15px;
-          font-weight: 500;
-          color: #fff;
+          color: white;
+
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
 
         .alert-value.danger {
@@ -720,7 +1073,6 @@ export default function Calculator() {
       <div className="bg" />
 
       <div className="wrapper">
-        {/* Hold hint */}
         <div className="hint">
           <span>mantén ESPACIO para alerta</span>
 
@@ -734,7 +1086,6 @@ export default function Calculator() {
           </div>
         </div>
 
-        {/* Calculator */}
         <div className="calc">
           {/* SETTINGS BUTTON */}
           <button
@@ -799,14 +1150,12 @@ export default function Calculator() {
         </div>
       </div>
 
-      {/* Emergency Alert */}
       {showAlert && (
         <div
           className="overlay"
-          onClick={() => {
-            setShowAlert(false);
-            setHoldProgress(0);
-          }}
+          onClick={() =>
+            setShowAlert(false)
+          }
         >
           <div
             className="alert-box"
@@ -860,13 +1209,66 @@ export default function Calculator() {
               </div>
             </div>
 
+            <div className="alert-field">
+              <div className="alert-label">
+                Offline mode
+              </div>
+
+              <div className="alert-value">
+                {ALERT_INFO.offline ===
+                "yes"
+                  ? "🔴 Offline"
+                  : "🟢 Online"}
+              </div>
+            </div>
+
+            <div className="alert-field">
+              <div className="alert-label">
+                Battery
+              </div>
+
+              <div
+                className="alert-value"
+                style={{
+                  color:
+                    batteryLevel !==
+                      null &&
+                    batteryLevel <= 20
+                      ? "#ff5f5f"
+                      : "white",
+                }}
+              >
+                {batteryLevel !==
+                null ? (
+                  <>
+                    {isCharging
+                      ? "⚡"
+                      : "🔋"}
+
+                    {batteryLevel}%
+                  </>
+                ) : (
+                  "Unavailable"
+                )}
+              </div>
+            </div>
+
+            {videoUrl && (
+              <div className="video-preview">
+                <video
+                  src={videoUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                />
+              </div>
+            )}
+
             <button
-              style={{ width: "92%", maxWidth: 420 }}
               className="alert-close"
-              onClick={() => {
-                setShowAlert(false);
-                setHoldProgress(0);
-              }}
+              onClick={() =>
+                setShowAlert(false)
+              }
             >
               Cerrar alerta
             </button>
