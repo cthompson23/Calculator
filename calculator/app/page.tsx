@@ -861,6 +861,7 @@ export default function Calculator() {
             </div>
 
             <button
+              style={{ width: "92%", maxWidth: 420 }}
               className="alert-close"
               onClick={() => {
                 setShowAlert(false);
