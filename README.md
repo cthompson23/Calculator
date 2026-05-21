@@ -20,8 +20,24 @@ Trabaja offline.
 ## Ideas de diseño de UI:
 1. Que sea dark-themed para que así emita menos luz y sea más sutil.
 
-(1) La red de contactos es: autoridades oficiales, 911, contactos cercanos del usuario
 
+## Funcionalidad:
+1. Toco 2 botones
+2. Se llaman las autoridades, la red de contactos
+3. Off-line
+4. (Posible): chatbot especializado sobre cómo salir de la situación con IA para respuestas rápidas (2)
+5. Se envía el porcentaje de batería para saber si el teléfono del usuario ya no está disponible y su ubicación al momento de agotarse la batería.
+
+## Detalles de implementación:
+1. Rate limiter
+
+## Pantallas:
+1. Pantalla principal: calculadora
+2. Pantalla de configuraciones: configurar la red de contactos, mi perfil
+3. Pantalla de chats
+
+(1) La red de contactos es: autoridades oficiales, 911, contactos cercanos del usuario
+(2) El modelo de IA contará con información verificada profesionalmente y será sensible al tono de la conversación para identificar el nivel de riesgo de la situación del usuario.
 
 
 *
