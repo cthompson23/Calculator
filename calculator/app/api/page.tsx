@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<
     { role: string; content: string }[]
@@ -95,8 +97,32 @@ export default function Home() {
         .header {
           width: 100%;
           max-width: 520px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
           margin-bottom: 20px;
         }
+
+        .back-btn {
+          all: unset;
+          cursor: pointer;
+          width: 38px;
+          height: 38px;
+          border: 1px solid rgba(255,255,255,.08);
+          border-radius: 12px;
+          background: rgba(255,255,255,.05);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(255,255,255,.75);
+          font-size: 18px;
+          transition: background .15s, transform .1s;
+          flex-shrink: 0;
+        }
+        .back-btn:hover  { background: rgba(255,255,255,.1); }
+        .back-btn:active { transform: scale(.92); }
+
+        .header-text { flex: 1; }
 
         .page-label {
           font-family: 'DM Mono', monospace;
@@ -104,7 +130,7 @@ export default function Home() {
           letter-spacing: .2em;
           text-transform: uppercase;
           color: rgba(255,255,255,.3);
-          margin-bottom: 4px;
+          margin-bottom: 2px;
         }
 
         .page-title {
@@ -144,19 +170,13 @@ export default function Home() {
           scroll-behavior: smooth;
         }
 
-        /* Custom scrollbar */
-        .messages-card::-webkit-scrollbar {
-          width: 4px;
-        }
-        .messages-card::-webkit-scrollbar-track {
-          background: transparent;
-        }
+        .messages-card::-webkit-scrollbar { width: 4px; }
+        .messages-card::-webkit-scrollbar-track { background: transparent; }
         .messages-card::-webkit-scrollbar-thumb {
           background: rgba(255,255,255,.1);
           border-radius: 2px;
         }
 
-        /* ── Empty state ── */
         .empty-state {
           flex: 1;
           display: flex;
@@ -172,24 +192,11 @@ export default function Home() {
           text-align: center;
         }
 
-        .empty-icon {
-          font-size: 28px;
-          opacity: .4;
-        }
+        .empty-icon { font-size: 28px; opacity: .4; }
 
-        /* ── Messages ── */
-        .msg-row {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .msg-row.user {
-          align-items: flex-end;
-        }
-
-        .msg-row.bot {
-          align-items: flex-start;
-        }
+        .msg-row { display: flex; flex-direction: column; }
+        .msg-row.user { align-items: flex-end; }
+        .msg-row.bot  { align-items: flex-start; }
 
         .msg-sender {
           font-family: 'DM Mono', monospace;
@@ -200,7 +207,7 @@ export default function Home() {
         }
 
         .msg-row.user .msg-sender { color: rgba(255,106,86,.6); }
-        .msg-row.bot .msg-sender  { color: rgba(255,255,255,.25); }
+        .msg-row.bot  .msg-sender { color: rgba(255,255,255,.25); }
 
         .bubble {
           max-width: 78%;
@@ -224,7 +231,6 @@ export default function Home() {
           border-bottom-left-radius: 4px;
         }
 
-        /* ── Typing indicator ── */
         .typing-bubble {
           background: rgba(255,255,255,.07);
           border: 1px solid rgba(255,255,255,.08);
@@ -243,16 +249,14 @@ export default function Home() {
           background: rgba(255,255,255,.35);
           animation: bounce 1.2s infinite ease-in-out;
         }
-
         .dot:nth-child(2) { animation-delay: .2s; }
         .dot:nth-child(3) { animation-delay: .4s; }
 
         @keyframes bounce {
           0%, 80%, 100% { transform: scale(.7); opacity: .4; }
-          40%           { transform: scale(1);  opacity: 1;   }
+          40%            { transform: scale(1);  opacity: 1;   }
         }
 
-        /* ── Input area ── */
         .input-card {
           background: rgba(20,20,28,.85);
           backdrop-filter: blur(24px);
@@ -276,10 +280,7 @@ export default function Home() {
           color: #fff;
           padding: 6px 8px;
         }
-
-        .chat-input::placeholder {
-          color: rgba(255,255,255,.2);
-        }
+        .chat-input::placeholder { color: rgba(255,255,255,.2); }
 
         .send-btn {
           all: unset;
@@ -297,26 +298,23 @@ export default function Home() {
           flex-shrink: 0;
           transition: background .15s, transform .1s;
         }
-
         .send-btn:hover  { background: rgba(255,255,255,.18); }
         .send-btn:active { transform: scale(.92); }
-
-        .send-btn:disabled {
-          opacity: .35;
-          cursor: not-allowed;
-          filter: none;
-        }
+        .send-btn:disabled { opacity: .35; cursor: not-allowed; }
       `}</style>
 
       <div className="bg" />
 
       <div className="page">
         <div className="header">
-          <div className="page-title">Asistente Virtual</div>
+          <button className="back-btn" onClick={() => router.push("/")}>←</button>
+          <div className="header-text">
+            <div className="page-label">Chat</div>
+            <div className="page-title">Asistente Virtual</div>
+          </div>
         </div>
 
         <div className="chat-wrap">
-          {/* Messages */}
           <div className="messages-card">
             {messages.length === 0 && !loading ? (
               <div className="empty-state">
@@ -326,10 +324,7 @@ export default function Home() {
             ) : (
               <>
                 {messages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`msg-row ${msg.role === "user" ? "user" : "bot"}`}
-                  >
+                  <div key={i} className={`msg-row ${msg.role === "user" ? "user" : "bot"}`}>
                     <div className="msg-sender">
                       {msg.role === "user" ? "Tú" : "Asistente"}
                     </div>
@@ -352,7 +347,6 @@ export default function Home() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input */}
           <div className="input-card">
             <input
               className="chat-input"

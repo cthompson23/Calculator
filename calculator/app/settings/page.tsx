@@ -337,8 +337,8 @@ export default function Settings() {
           display: flex;
           align-items: flex-start;
           gap: 10px;
-          background: rgba(255,60,80,.07);
-          border: 1px solid rgba(255,60,80,.18);
+          background: rgba(234,179,8,.07);
+          border: 1px solid rgba(234,179,8,.22);
           border-radius: 10px;
           padding: 11px 14px;
           margin-top: 2px;
@@ -356,7 +356,7 @@ export default function Settings() {
           font-family: 'DM Mono', monospace;
           font-size: 10px;
           letter-spacing: .07em;
-          color: rgba(255,106,86,.75);
+          color: rgba(234,179,8,.8);
           line-height: 1.6;
         }
 
