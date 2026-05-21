@@ -15,8 +15,9 @@ interface UserProfile {
   name: string;
 }
 
-const STORAGE_KEY_PROFILE = "alert_user_profile";
-const STORAGE_KEY_CONTACTS = "alert_contacts";
+const STORAGE_KEY_PROFILE   = "alert_user_profile";
+const STORAGE_KEY_CONTACTS  = "alert_contacts";
+const STORAGE_KEY_BACKGROUND = "alert_background_mode";
 
 const generateId = () =>
   Math.random().toString(36).slice(2, 9).toUpperCase();
@@ -28,8 +29,8 @@ export default function Settings() {
   const [profile, setProfile] = useState<UserProfile>({ id: "", name: "" });
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [saved, setSaved] = useState(false);
+  const [backgroundMode, setBackgroundMode] = useState(false);
 
-  // New contact form state
   const [newContact, setNewContact] = useState<Omit<Contact, "id">>({
     name: "",
     phone: "",
@@ -38,33 +39,28 @@ export default function Settings() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContact, setEditContact] = useState<Contact | null>(null);
 
-  // ── Load from localStorage ─────────────────────────────────────────────────
   useEffect(() => {
-    const savedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
-    const savedContacts = localStorage.getItem(STORAGE_KEY_CONTACTS);
+    const savedProfile    = localStorage.getItem(STORAGE_KEY_PROFILE);
+    const savedContacts   = localStorage.getItem(STORAGE_KEY_CONTACTS);
+    const savedBackground = localStorage.getItem(STORAGE_KEY_BACKGROUND);
 
-    if (savedProfile) setProfile(JSON.parse(savedProfile));
-    if (savedContacts) setContacts(JSON.parse(savedContacts));
+    if (savedProfile)    setProfile(JSON.parse(savedProfile));
+    if (savedContacts)   setContacts(JSON.parse(savedContacts));
+    if (savedBackground) setBackgroundMode(JSON.parse(savedBackground));
   }, []);
 
-  // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = () => {
-    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
-    localStorage.setItem(STORAGE_KEY_CONTACTS, JSON.stringify(contacts));
+    localStorage.setItem(STORAGE_KEY_PROFILE,    JSON.stringify(profile));
+    localStorage.setItem(STORAGE_KEY_CONTACTS,   JSON.stringify(contacts));
+    localStorage.setItem(STORAGE_KEY_BACKGROUND, JSON.stringify(backgroundMode));
 
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
-  // ── Contacts CRUD ──────────────────────────────────────────────────────────
   const addContact = () => {
     if (!newContact.name.trim() || !newContact.phone.trim()) return;
-
-    setContacts(prev => [
-      ...prev,
-      { id: generateId(), ...newContact },
-    ]);
-
+    setContacts(prev => [...prev, { id: generateId(), ...newContact }]);
     setNewContact({ name: "", phone: "" });
   };
 
@@ -79,11 +75,7 @@ export default function Settings() {
 
   const saveEdit = () => {
     if (!editContact) return;
-
-    setContacts(prev =>
-      prev.map(c => (c.id === editingId ? editContact : c))
-    );
-
+    setContacts(prev => prev.map(c => (c.id === editingId ? editContact : c)));
     setEditingId(null);
     setEditContact(null);
   };
@@ -98,11 +90,7 @@ export default function Settings() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 
-        *, *::before, *::after {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
           font-family: 'DM Sans', sans-serif;
@@ -115,16 +103,8 @@ export default function Settings() {
           inset: 0;
           z-index: 0;
           background:
-            radial-gradient(
-              ellipse 60% 50% at 20% 30%,
-              rgba(255,60,80,.10) 0%,
-              transparent 70%
-            ),
-            radial-gradient(
-              ellipse 50% 60% at 80% 70%,
-              rgba(60,80,255,.08) 0%,
-              transparent 70%
-            ),
+            radial-gradient(ellipse 60% 50% at 20% 30%, rgba(255,60,80,.10) 0%, transparent 70%),
+            radial-gradient(ellipse 50% 60% at 80% 70%, rgba(60,80,255,.08) 0%, transparent 70%),
             #0a0a0f;
         }
 
@@ -165,13 +145,10 @@ export default function Settings() {
           transition: background .15s, transform .1s;
           flex-shrink: 0;
         }
-
-        .back-btn:hover { background: rgba(255,255,255,.1); }
+        .back-btn:hover  { background: rgba(255,255,255,.1); }
         .back-btn:active { transform: scale(.92); }
 
-        .header-text {
-          flex: 1;
-        }
+        .header-text { flex: 1; }
 
         .page-label {
           font-family: 'DM Mono', monospace;
@@ -212,9 +189,7 @@ export default function Settings() {
           gap: 10px;
         }
 
-        .card-icon {
-          font-size: 15px;
-        }
+        .card-icon  { font-size: 15px; }
 
         .card-title {
           font-family: 'DM Mono', monospace;
@@ -232,11 +207,7 @@ export default function Settings() {
         }
 
         /* ── Fields ── */
-        .field {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
+        .field { display: flex; flex-direction: column; gap: 6px; }
 
         .field-label {
           font-family: 'DM Mono', monospace;
@@ -246,11 +217,7 @@ export default function Settings() {
           color: rgba(255,255,255,.35);
         }
 
-        .field-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
+        .field-row { display: flex; align-items: center; gap: 8px; }
 
         .input {
           all: unset;
@@ -264,23 +231,17 @@ export default function Settings() {
           color: #fff;
           transition: border .15s, background .15s;
         }
-
-        .input::placeholder {
-          color: rgba(255,255,255,.2);
-        }
-
+        .input::placeholder { color: rgba(255,255,255,.2); }
         .input:focus {
           border-color: rgba(255,60,80,.4);
           background: rgba(255,255,255,.07);
         }
-
         .input-mono {
           font-family: 'DM Mono', monospace;
           font-size: 14px;
           letter-spacing: .05em;
         }
 
-        /* ── ID badge ── */
         .id-badge {
           background: rgba(255,60,80,.1);
           border: 1px solid rgba(255,60,80,.2);
@@ -309,18 +270,98 @@ export default function Settings() {
           flex-shrink: 0;
           transition: background .15s, color .15s;
         }
+        .gen-btn:hover { background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); }
 
-        .gen-btn:hover {
-          background: rgba(255,255,255,.1);
-          color: rgba(255,255,255,.8);
-        }
-
-        /* ── Contacts list ── */
-        .contacts-list {
+        /* ── Toggle row ── */
+        .toggle-row {
           display: flex;
-          flex-direction: column;
-          gap: 8px;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
         }
+
+        .toggle-text { display: flex; flex-direction: column; gap: 3px; }
+
+        .toggle-title {
+          font-size: 14px;
+          font-weight: 500;
+          color: #fff;
+        }
+
+        .toggle-desc {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          letter-spacing: .08em;
+          color: rgba(255,255,255,.3);
+          line-height: 1.5;
+          max-width: 260px;
+        }
+
+        /* ── Slide toggle ── */
+        .toggle-track {
+          position: relative;
+          width: 50px;
+          height: 28px;
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,.1);
+          background: rgba(255,255,255,.06);
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: background .25s, border .25s;
+        }
+
+        .toggle-track.on {
+          background: rgba(255,60,80,.2);
+          border-color: rgba(255,60,80,.35);
+        }
+
+        .toggle-thumb {
+          position: absolute;
+          top: 3px;
+          left: 3px;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: rgba(255,255,255,.35);
+          transition: transform .25s cubic-bezier(.34,1.56,.64,1), background .25s;
+          box-shadow: 0 1px 4px rgba(0,0,0,.4);
+        }
+
+        .toggle-track.on .toggle-thumb {
+          transform: translateX(22px);
+          background: #ff6a56;
+        }
+
+        /* ── Warning chip ── */
+        .warning-chip {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          background: rgba(255,60,80,.07);
+          border: 1px solid rgba(255,60,80,.18);
+          border-radius: 10px;
+          padding: 11px 14px;
+          margin-top: 2px;
+          animation: chipIn .2s ease;
+        }
+
+        @keyframes chipIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .warning-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+        .warning-text {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          letter-spacing: .07em;
+          color: rgba(255,106,86,.75);
+          line-height: 1.6;
+        }
+
+        /* ── Contacts ── */
+        .contacts-list { display: flex; flex-direction: column; gap: 8px; }
 
         .contact-item {
           background: rgba(255,255,255,.04);
@@ -332,10 +373,7 @@ export default function Settings() {
           gap: 10px;
         }
 
-        .contact-info {
-          flex: 1;
-          min-width: 0;
-        }
+        .contact-info { flex: 1; min-width: 0; }
 
         .contact-name {
           font-size: 14px;
@@ -346,12 +384,7 @@ export default function Settings() {
           text-overflow: ellipsis;
         }
 
-        .contact-meta {
-          display: flex;
-          gap: 10px;
-          margin-top: 3px;
-          flex-wrap: wrap;
-        }
+        .contact-meta { display: flex; gap: 10px; margin-top: 3px; flex-wrap: wrap; }
 
         .contact-id {
           font-family: 'DM Mono', monospace;
@@ -366,11 +399,7 @@ export default function Settings() {
           color: rgba(255,255,255,.35);
         }
 
-        .contact-actions {
-          display: flex;
-          gap: 6px;
-          flex-shrink: 0;
-        }
+        .contact-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
         .icon-btn {
           all: unset;
@@ -384,7 +413,6 @@ export default function Settings() {
           font-size: 13px;
           transition: background .12s, transform .1s;
         }
-
         .icon-btn:active { transform: scale(.88); }
 
         .icon-btn-edit {
@@ -392,36 +420,18 @@ export default function Settings() {
           color: rgba(255,255,255,.5);
           border: 1px solid rgba(255,255,255,.08);
         }
-
-        .icon-btn-edit:hover {
-          background: rgba(255,255,255,.12);
-          color: rgba(255,255,255,.85);
-        }
+        .icon-btn-edit:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.85); }
 
         .icon-btn-del {
           background: rgba(255,60,80,.08);
           color: rgba(255,106,86,.6);
           border: 1px solid rgba(255,60,80,.12);
         }
+        .icon-btn-del:hover { background: rgba(255,60,80,.18); color: #ff6a56; }
 
-        .icon-btn-del:hover {
-          background: rgba(255,60,80,.18);
-          color: #ff6a56;
-        }
+        .edit-row { display: flex; flex-direction: column; gap: 8px; }
+        .edit-actions { display: flex; gap: 6px; }
 
-        /* ── Edit inline ── */
-        .edit-row {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .edit-actions {
-          display: flex;
-          gap: 6px;
-        }
-
-        /* ── Add contact form ── */
         .add-form {
           display: flex;
           flex-direction: column;
@@ -440,11 +450,7 @@ export default function Settings() {
           padding-top: 8px;
         }
 
-        .add-form-fields {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
+        .add-form-fields { display: flex; flex-direction: column; gap: 8px; }
 
         /* ── Buttons ── */
         .btn-primary {
@@ -463,8 +469,7 @@ export default function Settings() {
           transition: filter .15s, transform .1s;
           box-shadow: 0 2px 16px rgba(255,60,80,.25);
         }
-
-        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-primary:hover  { filter: brightness(1.1); }
         .btn-primary:active { transform: scale(.98); }
 
         .btn-secondary {
@@ -483,7 +488,6 @@ export default function Settings() {
           text-align: center;
           transition: background .15s;
         }
-
         .btn-secondary:hover { background: rgba(255,255,255,.1); }
 
         .btn-confirm {
@@ -502,7 +506,6 @@ export default function Settings() {
           text-align: center;
           transition: background .15s;
         }
-
         .btn-confirm:hover { background: rgba(255,60,80,.25); }
 
         .btn-add {
@@ -525,14 +528,13 @@ export default function Settings() {
           justify-content: center;
           gap: 8px;
         }
-
         .btn-add:hover {
           background: rgba(255,255,255,.09);
           color: rgba(255,255,255,.8);
           border-color: rgba(255,255,255,.18);
         }
 
-        /* ── Save toast ── */
+        /* ── Toast ── */
         .toast {
           position: fixed;
           bottom: 28px;
@@ -572,9 +574,7 @@ export default function Settings() {
 
         {/* Header */}
         <div className="header">
-          <button className="back-btn" onClick={() => router.push("/")}>
-            ←
-          </button>
+          <button className="back-btn" onClick={() => router.push("/")}>←</button>
           <div className="header-text">
             <div className="page-label">Configuración</div>
             <div className="page-title">Mi perfil</div>
@@ -587,7 +587,6 @@ export default function Settings() {
             <span className="card-icon">👤</span>
             <span className="card-title">Datos personales</span>
           </div>
-
           <div className="card-body">
             <div className="field">
               <div className="field-label">Cédula de usuario</div>
@@ -596,23 +595,14 @@ export default function Settings() {
                   className="input input-mono"
                   placeholder="Ej: A3F9B2C"
                   value={profile.id}
-                  onChange={e =>
-                    setProfile(p => ({ ...p, id: e.target.value.toUpperCase() }))
-                  }
+                  onChange={e => setProfile(p => ({ ...p, id: e.target.value.toUpperCase() }))}
                   maxLength={12}
                 />
-                <button
-                  className="gen-btn"
-                  onClick={() =>
-                    setProfile(p => ({ ...p, id: generateId() }))
-                  }
-                >
+                <button className="gen-btn" onClick={() => setProfile(p => ({ ...p, id: generateId() }))}>
                   Generar
                 </button>
               </div>
-              {profile.id && (
-                <div className="id-badge">#{profile.id}</div>
-              )}
+              {profile.id && <div className="id-badge">#{profile.id}</div>}
             </div>
 
             <div className="field">
@@ -621,11 +611,45 @@ export default function Settings() {
                 className="input"
                 placeholder="Ej: María García"
                 value={profile.name}
-                onChange={e =>
-                  setProfile(p => ({ ...p, name: e.target.value }))
-                }
+                onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
               />
             </div>
+          </div>
+        </div>
+
+        {/* ── Background mode card ── */}
+        <div className="card">
+          <div className="card-header">
+            <span className="card-icon">🔒</span>
+            <span className="card-title">Acceso y privacidad</span>
+          </div>
+          <div className="card-body">
+            <div className="toggle-row">
+              <div className="toggle-text">
+                <div className="toggle-title">Modo en segundo plano</div>
+                <div className="toggle-desc">
+                  Permite que la app funcione sin desbloquear el teléfono
+                </div>
+              </div>
+              <div
+                className={`toggle-track ${backgroundMode ? "on" : ""}`}
+                onClick={() => setBackgroundMode(v => !v)}
+                role="switch"
+                aria-checked={backgroundMode}
+              >
+                <div className="toggle-thumb" />
+              </div>
+            </div>
+
+            {backgroundMode && (
+              <div className="warning-chip">
+                <span className="warning-icon">⚠</span>
+                <span className="warning-text">
+                  Con este modo activo la app puede enviar alertas desde la pantalla de bloqueo.
+                  Asegurate de tener activados los permisos de notificaciones y accesibilidad en tu sistema operativo.
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -635,9 +659,7 @@ export default function Settings() {
             <span className="card-icon">📋</span>
             <span className="card-title">Contactos de emergencia</span>
           </div>
-
           <div className="card-body">
-            {/* List */}
             {contacts.length === 0 ? (
               <div className="empty-state">Sin contactos agregados</div>
             ) : (
@@ -650,29 +672,17 @@ export default function Settings() {
                           className="input"
                           placeholder="Nombre"
                           value={editContact.name}
-                          onChange={e =>
-                            setEditContact(ec =>
-                              ec ? { ...ec, name: e.target.value } : ec
-                            )
-                          }
+                          onChange={e => setEditContact(ec => ec ? { ...ec, name: e.target.value } : ec)}
                         />
                         <input
                           className="input input-mono"
                           placeholder="Teléfono"
                           value={editContact.phone}
-                          onChange={e =>
-                            setEditContact(ec =>
-                              ec ? { ...ec, phone: e.target.value } : ec
-                            )
-                          }
+                          onChange={e => setEditContact(ec => ec ? { ...ec, phone: e.target.value } : ec)}
                         />
                         <div className="edit-actions">
-                          <button className="btn-secondary" onClick={cancelEdit}>
-                            Cancelar
-                          </button>
-                          <button className="btn-confirm" onClick={saveEdit}>
-                            Guardar
-                          </button>
+                          <button className="btn-secondary" onClick={cancelEdit}>Cancelar</button>
+                          <button className="btn-confirm"   onClick={saveEdit}>Guardar</button>
                         </div>
                       </div>
                     ) : (
@@ -685,20 +695,8 @@ export default function Settings() {
                           </div>
                         </div>
                         <div className="contact-actions">
-                          <button
-                            className="icon-btn icon-btn-edit"
-                            onClick={() => startEdit(c)}
-                            title="Editar"
-                          >
-                            ✎
-                          </button>
-                          <button
-                            className="icon-btn icon-btn-del"
-                            onClick={() => removeContact(c.id)}
-                            title="Eliminar"
-                          >
-                            ✕
-                          </button>
+                          <button className="icon-btn icon-btn-edit" onClick={() => startEdit(c)} title="Editar">✎</button>
+                          <button className="icon-btn icon-btn-del"  onClick={() => removeContact(c.id)} title="Eliminar">✕</button>
                         </div>
                       </>
                     )}
@@ -707,7 +705,6 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Add new contact form */}
             <div className="add-form">
               <div className="add-form-title">Agregar contacto</div>
               <div className="add-form-fields">
@@ -715,25 +712,17 @@ export default function Settings() {
                   className="input"
                   placeholder="Nombre completo"
                   value={newContact.name}
-                  onChange={e =>
-                    setNewContact(n => ({ ...n, name: e.target.value }))
-                  }
+                  onChange={e => setNewContact(n => ({ ...n, name: e.target.value }))}
                 />
                 <input
                   className="input input-mono"
                   placeholder="Teléfono (+54 9 11 ...)"
                   value={newContact.phone}
-                  onChange={e =>
-                    setNewContact(n => ({ ...n, phone: e.target.value }))
-                  }
+                  onChange={e => setNewContact(n => ({ ...n, phone: e.target.value }))}
                   type="tel"
                 />
               </div>
-              <button
-                style={{ width: "94.3%", maxWidth: 420 }}
-                className="btn-add"
-                onClick={addContact}
-              >
+              <button className="btn-add" onClick={addContact}>
                 <span>+</span>
                 <span>Agregar contacto</span>
               </button>
@@ -741,18 +730,15 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Save button */}
-        <div style={{ width: 150, maxWidth: 420 }}>
+        {/* Save */}
+        <div style={{ width: "100%", maxWidth: 420 }}>
           <button className="btn-primary" onClick={handleSave}>
             Guardar cambios
           </button>
         </div>
       </div>
 
-      {/* Toast */}
-      {saved && (
-        <div className="toast">✓ Guardado correctamente</div>
-      )}
+      {saved && <div className="toast">✓ Guardado correctamente</div>}
     </>
   );
 }
