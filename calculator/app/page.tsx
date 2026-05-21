@@ -613,8 +613,31 @@ export default function Calculator() {
         .btn-fn { background: rgba(255,255,255,.12); }
         .btn-eq { background: rgba(255,255,255,.12) }
         .btn-span { grid-column: span 2; }
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(10px); z-index: 100; display: flex; align-items: center; justify-content: center; }
-        .alert-box { width: 92%; max-width: 520px; background: #111118; border-radius: 24px; padding: 28px; border: 1px solid rgba(255,255,255,.08); }
+        
+        /* CAMBIOS PARA HACER EL MODAL SCROLLABLE */
+        .overlay { 
+          position: fixed; 
+          inset: 0; 
+          background: rgba(0,0,0,.72); 
+          backdrop-filter: blur(10px); 
+          z-index: 100; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center;
+          overflow-y: auto; /* Permite scroll vertical en el fondo si el contenedor es muy grande */
+          padding: 20px 0;   /* Espacio para que el modal no se pegue a los bordes superior/inferior */
+        }
+        .alert-box { 
+          width: 92%; 
+          max-width: 520px; 
+          background: #111118; 
+          border-radius: 24px; 
+          padding: 28px; 
+          border: 1px solid rgba(255,255,255,.08);
+          max-height: 85vh; /* Evita que el cuadro sea más alto que la pantalla del dispositivo */
+          overflow-y: auto; /* Genera scroll interno dentro de la caja si el video o los campos desbordan */
+        }
+        
         .alert-title { color: white; font-size: 24px; font-weight: bold; margin-bottom: 16px; }
         .recording { margin-bottom: 20px; padding: 14px 16px; border-radius: 14px; background: rgba(255,60,80,.14); color: #ff6575; display: flex; align-items: center; justify-content: space-between; }
         .record-dot { width: 12px; height: 12px; border-radius: 999px; background: #ff3c50; animation: pulse 1s infinite; }
