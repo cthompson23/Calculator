@@ -611,7 +611,7 @@ export default function Calculator() {
         .btn:active { transform: scale(.94); }
         .btn-op { background: rgba(255,80,60,.18); color: #ff6a56; }
         .btn-fn { background: rgba(255,255,255,.12); }
-        .btn-eq { background: linear-gradient(135deg, #ff3c50, #ff7e30); }
+        .btn-eq { background: rgba(255,255,255,.12) }
         .btn-span { grid-column: span 2; }
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(10px); z-index: 100; display: flex; align-items: center; justify-content: center; }
         .alert-box { width: 92%; max-width: 520px; background: #111118; border-radius: 24px; padding: 28px; border: 1px solid rgba(255,255,255,.08); }
